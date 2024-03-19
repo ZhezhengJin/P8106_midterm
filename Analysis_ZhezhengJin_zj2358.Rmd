@@ -1,0 +1,64 @@
+---
+title: "Midterm Project Analysis"
+author: "Zhezheng Jin"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
+    toc_depth: 2
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '2'
+header-includes:
+- \usepackage{fancyhdr}
+- \usepackage{lipsum}
+- \pagestyle{fancy}
+- \fancyhead[R]{\thepage}
+- \fancypagestyle{plain}{\pagestyle{fancy}}
+editor_options: 
+  chunk_output_type: console
+--- 
+
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+```{r, echo = TRUE, message = FALSE, results='hide', warning=FALSE}
+library(tidyverse)
+library(caret)
+library(tidymodels)
+library(earth)
+library(splines)
+library(mgcv)
+library(pdp)
+library(bayesQR)
+```
+
+
+
+
+
+
+
+
+
+
