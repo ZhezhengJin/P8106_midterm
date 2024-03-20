@@ -54,7 +54,23 @@ library(bayesQR)
 ```
 
 
+## Descriptive Statistics
+```{r}
+summary(dat)
+sum(is.na(dat))
+```
 
+The "recovery" dataset contains `r ncol(dat)` columns and `r nrow(dat)` observations without any missing values.
+
+## Expoloratory Data Analysis
+```{r}
+
+```
+
+## Model training
+```{r}
+
+```
 
 
 
