@@ -22,6 +22,18 @@ editor_options:
 
 \newpage
 
+```{r, echo = TRUE, message = FALSE, results='hide', warning=FALSE}
+library(tidyverse)
+library(caret)
+library(tidymodels)
+library(earth)
+library(splines)
+library(mgcv)
+library(pdp)
+library(corrplot)
+library(bayesQR)
+```
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
 	echo = TRUE,
@@ -42,38 +54,63 @@ scale_colour_discrete = scale_colour_viridis_d
 scale_fill_discrete = scale_fill_viridis_d
 ```
 
-```{r, echo = TRUE, message = FALSE, results='hide', warning=FALSE}
-library(tidyverse)
-library(caret)
-library(tidymodels)
-library(earth)
-library(splines)
-library(mgcv)
-library(pdp)
-library(bayesQR)
-```
-
-
-## Descriptive Statistics
+## Summary Statistics
 ```{r}
 summary(dat)
 sum(is.na(dat))
+skimr::skim(dat)
 ```
 
-The "recovery" dataset contains `r ncol(dat)` columns and `r nrow(dat)` observations without any missing values.
+The "recovery" dataset contains `r ncol(dat)` columns and `r nrow(dat)` observations without any missing values. We have 16 predictors (13 numeric and 3 factor(character) variables).
+
+## Model training Preparation
+```{r}
+# data partition
+set.seed(5)
+indexTrain <- createDataPartition(y = dat$recovery_time, p = 0.8, list = FALSE)
+train <- dat[indexTrain, ]
+test <- dat[-indexTrain, ]
+
+# matrix of predictors 
+x <- model.matrix(recovery_time~.,train)[,-1]
+x2 <- model.matrix(recovery_time~.,test)[,-1]
+
+# vector of response
+y <- train$recovery_time
+y2 <- test$recovery_time
+```
 
 ## Expoloratory Data Analysis
 ```{r}
-
+# Correlation plots
+corrplot(cor(x), method = "circle", type = "full")
 ```
 
-## Model training
+From the correlation matrix, some multicollinearities are severe shown in the training data, cross-validation will be applied in the next steps.
+
+Next, we will fit 5 linear models (Lasso, ridge, elastic net, PCR, PLS) using caret, and conduct the model comparison to choose the best fitted one.
+
+## Lasso 
 ```{r}
+# 10-fold cv on best
+ctrl1 <- trainControl(method = "cv", number = 10)
+
 
 ```
 
+## Ridge
 
 
+
+## Elastic net
+
+
+
+## Principal Component Regression(PCR)
+
+
+
+## Partial least squares(PLS)
 
 
 
