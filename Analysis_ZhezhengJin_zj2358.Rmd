@@ -32,6 +32,7 @@ library(mgcv)
 library(pdp)
 library(corrplot)
 library(bayesQR)
+library(pls)
 ```
 
 ```{r setup, include=FALSE}
@@ -56,6 +57,7 @@ scale_fill_discrete = scale_fill_viridis_d
 
 ## Summary Statistics
 ```{r}
+load("recovery.RData")
 summary(dat)
 sum(is.na(dat))
 skimr::skim(dat)
@@ -95,23 +97,153 @@ Next, we will fit 5 linear models (Lasso, ridge, elastic net, PCR, PLS) using ca
 # 10-fold cv on best
 ctrl1 <- trainControl(method = "cv", number = 10)
 
+# # Fitting the model with Cross-validation
+set.seed(5)
+lasso.fit <- train(x, y, method = "glmnet", 
+                   tuneGrid = expand.grid(alpha = 1,
+                                          lambda = exp(seq(6, 0, length=100))),
+                   trControl = ctrl1)
 
+plot(lasso.fit, xTrans = log)
+
+# Tuning parameters
+lasso.fit$bestTune
+
+# coefficients in the final model
+coef(lasso.fit$finalModel, lasso.fit$bestTune$lambda)
+
+# Make prediction on test data
+lasso.pred <- predict(lasso.fit, newdata = x2)
+
+# Test error
+lasso.mse <- mean((lasso.pred - y2)^2)
+lasso.mse
 ```
 
 ## Ridge
+```{r}
+# Fitting the model with Cross-validation
+set.seed(5)
+ridge.fit <- train(x, y, method = "glmnet", 
+                   tuneGrid = expand.grid(alpha = 0,
+                                          lambda = exp(seq(6, 0, length=100))),
+                   trControl = ctrl1)
 
+plot(ridge.fit, xTrans = log)
 
+# Tuning parameters
+ridge.fit$bestTune
+
+# coefficients in the final model
+coef(ridge.fit$finalModel, s = ridge.fit$bestTune$lambda)
+
+# Make prediction on test data
+ridge.pred <- predict(ridge.fit, newdata = x2)
+
+# Test error
+ridge.mse <- mean((ridge.pred - y2)^2)
+ridge.mse
+```
 
 ## Elastic net
+```{r}
+# Fitting the model with Cross-validation
+set.seed(5)
+enet.fit <- train(x, y,method = "glmnet",
+                  tuneGrid = expand.grid(alpha = seq(0 , 1, length = 19), 
+                                         lambda = exp(seq(6, 0, length = 100))),
+                  trControl = ctrl1)
 
+# Tuning parameters
+enet.fit$bestTune
 
+# 25 kinds of Plot colors
+myCol<- rainbow(25)
+myPar <- list(superpose.symbol = list(col = myCol),
+superpose.line = list(col = myCol))
+
+# Plot CV RMSE-alpha&lambda
+plot(enet.fit, par.settings = myPar)
+
+# Coefficients
+coef(enet.fit$finalModel, enet.fit$bestTune$lambda)
+
+# Make prediction on test data
+enet.pred <- predict(enet.fit, newdata = x2)
+
+# Test error
+enet.mse <- mean((enet.pred - y2)^2)
+enet.mse
+```
 
 ## Principal Component Regression(PCR)
 
+```{r}
+# Check number of components
+set.seed(5)
+pcr.mod <- pcr(recovery_time~.,data = train,
+                scale = TRUE, validation = "CV")
+summary(pcr.mod)
+
+# Fitting the model with Cross-validation
+pcr.fit <-  train(x, y,
+                  method = "pcr",
+                  tuneGrid = data.frame(ncomp = 1:18),
+                  trControl = ctrl1,
+                  preProcess = c("center", "scale"))
+
+# Make prediction on test data
+pcr.pred <- predict(pcr.fit, newdata = x2)
+
+# Test error
+pcr.mse <- mean((pcr.pred - y2)^2)
+pcr.mse
+
+# Plot cv RMSE-components
+ggplot(pcr.fit, highlight = TRUE) + theme_bw()
+```
 
 
 ## Partial least squares(PLS)
+```{r}
+# Check number of components
+set.seed(5)
+pls.mod <- plsr(recovery_time~.,data = train,
+                scale = TRUE, validation = "CV")
+summary(pls.mod)
 
+# Fitting the model with Cross-validation
+pls.fit <-  train(x, y,
+                  method = "pls",
+                  tuneGrid = data.frame(ncomp = 1:18),
+                  trControl = ctrl1,
+                  preProcess = c("center", "scale"))
 
+# Make prediction on test data
+pls.pred <- predict(pls.fit, newdata = x2)
 
+# Test error
+pls.mse <- mean((pls.pred - y2)^2)
+pls.mse
+
+# Plot cv RMSE-components
+ggplot(pls.fit, highlight = TRUE)
+```
+
+## Model Comparison
+```{r}
+# resamples
+set.seed(5)
+resamp <- resamples(list(lasso = lasso.fit,
+                         ridge = ridge.fit,
+                         enet = enet.fit,
+                         pcr = pcr.fit,
+                         pls = pls.fit))
+summary(resamp)
+
+# RMSE box-plot between models
+bwplot(resamp, metric = "RMSE")
+```
+
+Based on the summary and plot, we would likely use the Principal Component Regression or Partial least squares models to predict our response because they minimize the mean RMSE over resamples.
 
