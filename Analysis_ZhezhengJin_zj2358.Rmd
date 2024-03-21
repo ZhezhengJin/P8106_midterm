@@ -28,7 +28,6 @@ library(caret)
 library(mgcv)
 library(pdp)
 library(corrplot)
-library(pls)
 library(plotmo)
 library(ggrepel)
 ```
@@ -95,7 +94,7 @@ corrplot(cor(x_continuous), method = "circle", type = "full")
 
 From the correlation matrix, some multicollinearities are severe shown in the numerical predictors of training data, cross-validation will be applied in the next steps.
 
-Next, we will fit 5 linear models (Lasso, ridge, elastic net, PCR, PLS) using caret, and conduct the model comparison to choose the best fitted one.
+Next, we will fit 5 linear models(Lasso, ridge, elastic net, PCR, PLS) and 2 non-linear models(GAM, MARS) using caret, and conduct the model comparison to choose the best fitted one.
 
 ## Lasso 
 ```{r}
@@ -224,6 +223,14 @@ pls.mse
 ggplot(pls.fit, highlight = TRUE)
 ```
 
+## Generalized additive model (GAM)
+
+
+## Multivariate Adaptive Regression Splines (MARS)
+
+
+
+
 ## Model Comparison
 ```{r}
 # resamples
@@ -239,5 +246,5 @@ summary(resamp)
 bwplot(resamp, metric = "RMSE")
 ```
 
-Based on the summary and plot, we would likely use the Principal Component Regression or Partial least squares models to predict our response because they minimize the mean RMSE over resamples.
+Based on the summary and plot, we would likely use the () to predict our response because they minimize the mean RMSE over resamples.
 
