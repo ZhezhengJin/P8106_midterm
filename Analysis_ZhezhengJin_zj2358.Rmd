@@ -24,8 +24,10 @@ editor_options:
 
 ```{r, echo = TRUE, message = FALSE, results='hide', warning=FALSE}
 library(tidyverse)
+library(patchwork)
 library(caret)
 library(mgcv)
+library(AppliedPredictiveModeling)
 library(pdp)
 library(corrplot)
 library(plotmo)
@@ -51,22 +53,36 @@ scale_colour_discrete = scale_colour_viridis_d
 scale_fill_discrete = scale_fill_viridis_d
 ```
 
-## Summary Statistics
+## Data Wrangling
 ```{r}
 load("recovery.RData")
-dat <- dat %>%
-  select(-id)
+dat = dat %>%
+  select(-id) %>%
+  mutate(
+    gender = as.factor(gender),
+    race = as.factor(race),
+    smoking = as.factor(smoking),
+    hypertension = as.factor(hypertension),
+    diabetes = as.factor(diabetes),
+    vaccine = as.factor(vaccine),
+    severity = as.factor(severity),
+    study = as.factor(study))
+```
+
+
+## Summary Statistics
+```{r}
 summary(dat)
 sum(is.na(dat))
 skimr::skim(dat)
 ```
 
-The "recovery" dataset contains `r ncol(dat)` columns and `r nrow(dat)` observations without any missing values after omitting the `id` variable. We have 14 predictors (11 numeric and 3 factor(character) variables) in the dataset.
+The "recovery" dataset contains `r ncol(dat)` columns and `r nrow(dat)` observations without any missing values after omitting the `id` variable. We have 14 predictors (6 numeric and 8 factor(character) variables) in the dataset. Then we partition the dataset into two parts: training data (80%) and test data (20%).
 
 ## Model training Preparation
 ```{r}
 # data partition
-set.seed(5)
+set.seed(2358)
 indexTrain <- createDataPartition(y = dat$recovery_time, p = 0.8, list = FALSE)
 train <- dat[indexTrain, ]
 test <- dat[-indexTrain, ]
@@ -82,26 +98,103 @@ y2 <- test$recovery_time
 
 ## Expoloratory Data Analysis
 ```{r}
-# Remove all the categorical predictors out from x
+# Remove all the categorical predictors out from x before plotting
 x_continuous <- 
   x[, !(colnames(x) %in% 
-          c("gender", "race2","race3", "race4", 
-            "smoking1","smoking2", "hypertension", 
-            "diabetes", "vaccine", "severity", "studyB"))]
+          c("gender1", "race2","race3", "race4", 
+            "smoking1","smoking2", "hypertension1", 
+            "diabetes1", "vaccine1", "severity1", "studyB"))]
+
+# For Continuous Predictors
+theme1 <- trellis.par.get()
+theme1$plot.symbol$col <- rgb(.2, .4, .2, .5)
+theme1$plot.symbol$pch <- 16
+theme1$plot.line$col <- rgb(.8, .1, .1, 1)
+theme1$plot.line$lwd <- 2
+theme1$strip.background$col <- rgb(.0, .2, .6, .2)
+trellis.par.set(theme1)
+featurePlot(x_continuous,
+            y,
+            plot = "scatter",
+            span = .5,
+            labels = c("Continuous Predictors","Time from COVID-19 infection to recovery (days)"),
+            type = c("p", "smooth"),
+            layout = c(3, 2))
+
+# For Categorical Predictors
+dis_gender = train %>%
+  ggplot(aes(x = gender, y = recovery_time)) + 
+  geom_violin(fill = "orange", color = "blue", alpha = .5) + 
+  scale_x_discrete(labels = c('Female','Male'))
+
+dis_race = train %>%
+  ggplot(aes(x = race, y = recovery_time)) + 
+  geom_violin(fill = "orange", color = "blue", alpha = .5) + 
+  scale_x_discrete(labels = c('White','Asian','Black', 'Hispanic'))
+
+dis_smoking = train %>%
+  ggplot(aes(x = smoking, y = recovery_time)) + 
+  geom_violin(fill = "orange", color = "blue", alpha = .5) +
+  scale_x_discrete(labels = c('Never smoked','Former smoker','Current smoker'))
+
+dis_hyper = train %>%
+  ggplot(aes(x = hypertension, y = recovery_time)) + 
+  geom_violin(fill = "orange", color = "blue", alpha = .5) +
+  scale_x_discrete(labels = c('No','Yes'))
+
+dis_diabetes = train %>%
+  ggplot(aes(x = diabetes, y = recovery_time)) + 
+  geom_violin(fill = "orange", color = "blue", alpha = .5) +
+  scale_x_discrete(labels = c('No','Yes'))
+
+dis_vac = train %>%
+  ggplot(aes(x = vaccine, y = recovery_time)) + 
+  geom_violin(fill = "orange", color = "blue", alpha = .5) +
+  scale_x_discrete(labels = c('Not vaccinated','Vaccinated'))
+
+dis_serverity = train %>%
+  ggplot(aes(x = severity, y = recovery_time)) + 
+  geom_violin(fill = "orange", color = "blue", alpha = .5) +
+  scale_x_discrete(labels = c('Not severe','Severe'))
+
+dis_study = train %>%
+  ggplot(aes(x = study, y = recovery_time)) + 
+  geom_violin(fill = "orange", color = "blue", alpha = .5)
+
+dis_gender + dis_race + dis_smoking + dis_hyper + dis_diabetes + dis_vac + dis_serverity + dis_study + plot_layout(ncol=3)
+
 # Correlation plots
 corrplot(cor(x_continuous), method = "circle", type = "full")
 ```
 
-From the correlation matrix, some multicollinearities are severe shown in the numerical predictors of training data, cross-validation will be applied in the next steps.
+From the correlation matrix, some multicollinearities are severe shown in the continuous predictors of training data, cross-validation will be applied in the next steps.
 
-Next, we will fit 5 linear models(Lasso, ridge, elastic net, PCR, PLS) and 2 non-linear models(GAM, MARS) using caret, and conduct the model comparison to choose the best fitted one.
+Next, we will fit 6 linear models(Linear, Lasso, ridge, elastic net, PCR, PLS) and 2 non-linear models(GAM, MARS) using caret, and conduct the model comparison to choose the best fitted one.
 
-## Lasso 
+## Linear
 ```{r}
 # 10-fold cv on best
 ctrl1 <- trainControl(method = "cv", number = 10)
+
 # Fitting the model with Cross-validation
-set.seed(5)
+set.seed(2358)
+lm.fit <- train(x, y, method = "lm", trControl = ctrl1)
+
+# Final model coefficients
+coef(lm.fit$finalModel)
+
+# Make prediction on test data
+lm.pred <- predict(lm.fit, newdata = x2)
+
+# Test error
+lm.mse <- mean((lm.pred - y2)^2)
+lm.mse
+```
+
+## Lasso 
+```{r}
+# Fitting the model with Cross-validation
+set.seed(2358)
 lasso.fit <- train(x, y, method = "glmnet", 
                    tuneGrid = expand.grid(alpha = 1,
                                           lambda = exp(seq(6, 0, length=100))),
@@ -126,7 +219,7 @@ lasso.mse
 ## Ridge
 ```{r}
 # Fitting the model with Cross-validation
-set.seed(5)
+set.seed(2358)
 ridge.fit <- train(x, y, method = "glmnet", 
                    tuneGrid = expand.grid(alpha = 0,
                                           lambda = exp(seq(6, 0, length=100))),
@@ -151,7 +244,7 @@ ridge.mse
 ## Elastic net
 ```{r}
 # Fitting the model with Cross-validation
-set.seed(5)
+set.seed(2358)
 enet.fit <- train(x, y,method = "glmnet",
                   tuneGrid = expand.grid(alpha = seq(0 , 1, length = 19), 
                                          lambda = exp(seq(6, 0, length = 100))),
@@ -183,7 +276,7 @@ enet.mse
 
 ```{r}
 # Fitting the model with Cross-validation
-set.seed(5)
+set.seed(2358)
 pcr.fit <-  train(x, y,
                   method = "pcr",
                   tuneGrid = data.frame(ncomp = 1:17),
@@ -205,7 +298,7 @@ ggplot(pcr.fit, highlight = TRUE) + theme_bw()
 ## Partial least squares(PLS)
 ```{r}
 # Fitting the model with Cross-validation
-set.seed(5)
+set.seed(2358)
 pls.fit <-  train(x, y,
                   method = "pls",
                   tuneGrid = data.frame(ncomp = 1:17),
@@ -224,27 +317,96 @@ ggplot(pls.fit, highlight = TRUE)
 ```
 
 ## Generalized additive model (GAM)
+```{r}
+# Fit a generalized additive model (GAM) using all the predictors
+set.seed(2358)
+gam.fit <- train(x, y,
+                 method = "gam",
+                 tuneGrid = data.frame(method = "GCV.Cp", select = TRUE),
+                 trControl = ctrl1)
+
+gam.fit$bestTune
+gam.fit$finalModel
+
+# Plot the results
+par(mfrow=c(2,3))
+plot(gam.fit$finalModel)
+
+# Make prediction on test data
+gam.pred <- predict(gam.fit, newdata = x2)
+
+# test error
+gam.test.error <- mean((gam.pred - y2)^2)
+gam.test.error
+```
 
 
 ## Multivariate Adaptive Regression Splines (MARS)
+```{r}
+mars_grid <- expand.grid(degree = 1:3,
+                         nprune = 2:25)
 
+set.seed(2358)
+mars.fit <- train(x, y,
+                  method = "earth",
+                  tuneGrid = mars_grid,
+                  trControl = ctrl1)
 
+ggplot(mars.fit, highlight = T)
 
+mars.fit$bestTune
+
+coef(mars.fit$finalModel)
+
+# Present the partial dependence plot of an arbitrary predictor
+p1 <- pdp::partial(mars.fit, pred.var = c("bmi"), grid.resolution = 10) %>% autoplot()
+
+p2 <- pdp::partial(mars.fit, pred.var = c("SBP"), grid.resolution = 10) %>% autoplot()
+
+p3 <- pdp::partial(mars.fit, pred.var = c("studyB"), grid.resolution = 10) %>% autoplot()
+
+p4 <- pdp::partial(mars.fit, pred.var = c("bmi", "SBP"), 
+                   grid.resolution = 10) %>%
+      pdp::plotPartial(levelplot = FALSE, zlab = "Time", drape = TRUE, 
+                       screen = list(z = 20, x = -60))
+
+p5 <- pdp::partial(mars.fit, pred.var = c("bmi", "studyB"), 
+                   grid.resolution = 10) %>%
+      pdp::plotPartial(levelplot = FALSE, zlab = "Time", drape = TRUE, 
+                       screen = list(z = 20, x = -60))
+
+p6 <- pdp::partial(mars.fit, pred.var = c("SBP", "studyB"), 
+                   grid.resolution = 10) %>%
+      pdp::plotPartial(levelplot = FALSE, zlab = "Time", drape = TRUE, 
+                       screen = list(z = 20, x = -60))
+
+gridExtra::grid.arrange(p1, p2,p3, p4, p5, p6, ncol = 3)
+
+# Make prediction on test data
+mars.pred <- predict(mars.fit, newdata = x2)
+
+# test error
+mars.test.error <- mean((mars.pred - y2)^2)
+mars.test.error
+```
 
 ## Model Comparison
 ```{r}
-# resamples
-set.seed(5)
-resamp <- resamples(list(lasso = lasso.fit,
+# re-samples
+set.seed(2358)
+resamp <- resamples(list(lm = lm.fit,
+                         lasso = lasso.fit,
                          ridge = ridge.fit,
                          enet = enet.fit,
                          pcr = pcr.fit,
-                         pls = pls.fit))
+                         pls = pls.fit,
+                         gam = gam.fit,
+                         mars = mars.fit))
 summary(resamp)
 
 # RMSE box-plot between models
 bwplot(resamp, metric = "RMSE")
 ```
 
-Based on the summary and plot, we would likely use the () to predict our response because they minimize the mean RMSE over resamples.
+Based on the summary and plot, we would likely use the Multivariate Adaptive Regression Splines (MARS) model to predict the recovery time from COVID-19 illness because it minimizes the mean RMSE over re-samples.
 
