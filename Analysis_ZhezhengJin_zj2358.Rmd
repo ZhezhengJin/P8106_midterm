@@ -43,7 +43,6 @@ knitr::opts_chunk$set(
   fig.height = 6,
   out.width = "90%"
 )
-
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
 
 options(
@@ -58,12 +57,14 @@ scale_fill_discrete = scale_fill_viridis_d
 ## Summary Statistics
 ```{r}
 load("recovery.RData")
+dat <- dat %>%
+  select(-id)
 summary(dat)
 sum(is.na(dat))
 skimr::skim(dat)
 ```
 
-The "recovery" dataset contains `r ncol(dat)` columns and `r nrow(dat)` observations without any missing values. We have 16 predictors (13 numeric and 3 factor(character) variables).
+The "recovery" dataset contains `r ncol(dat)` columns and `r nrow(dat)` observations without any missing values after omitting the `id` variable. We have 14 predictors (11 numeric and 3 factor(character) variables) in the dataset.
 
 ## Model training Preparation
 ```{r}
@@ -96,8 +97,7 @@ Next, we will fit 5 linear models (Lasso, ridge, elastic net, PCR, PLS) using ca
 ```{r}
 # 10-fold cv on best
 ctrl1 <- trainControl(method = "cv", number = 10)
-
-# # Fitting the model with Cross-validation
+# Fitting the model with Cross-validation
 set.seed(5)
 lasso.fit <- train(x, y, method = "glmnet", 
                    tuneGrid = expand.grid(alpha = 1,
@@ -179,13 +179,8 @@ enet.mse
 ## Principal Component Regression(PCR)
 
 ```{r}
-# Check number of components
-set.seed(5)
-pcr.mod <- pcr(recovery_time~.,data = train,
-                scale = TRUE, validation = "CV")
-summary(pcr.mod)
-
 # Fitting the model with Cross-validation
+set.seed(5)
 pcr.fit <-  train(x, y,
                   method = "pcr",
                   tuneGrid = data.frame(ncomp = 1:18),
@@ -206,13 +201,8 @@ ggplot(pcr.fit, highlight = TRUE) + theme_bw()
 
 ## Partial least squares(PLS)
 ```{r}
-# Check number of components
-set.seed(5)
-pls.mod <- plsr(recovery_time~.,data = train,
-                scale = TRUE, validation = "CV")
-summary(pls.mod)
-
 # Fitting the model with Cross-validation
+set.seed(5)
 pls.fit <-  train(x, y,
                   method = "pls",
                   tuneGrid = data.frame(ncomp = 1:18),
