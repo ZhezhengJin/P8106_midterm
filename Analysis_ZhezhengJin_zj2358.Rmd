@@ -361,21 +361,21 @@ coef(mars.fit$finalModel)
 # Present the partial dependence plot of an arbitrary predictor
 p1 <- pdp::partial(mars.fit, pred.var = c("bmi"), grid.resolution = 10) %>% autoplot()
 
-p2 <- pdp::partial(mars.fit, pred.var = c("SBP"), grid.resolution = 10) %>% autoplot()
+p2 <- pdp::partial(mars.fit, pred.var = c("age"), grid.resolution = 10) %>% autoplot()
 
-p3 <- pdp::partial(mars.fit, pred.var = c("studyB"), grid.resolution = 10) %>% autoplot()
+p3 <- pdp::partial(mars.fit, pred.var = c("vaccine1"), grid.resolution = 10) %>% autoplot()
 
-p4 <- pdp::partial(mars.fit, pred.var = c("bmi", "SBP"), 
+p4 <- pdp::partial(mars.fit, pred.var = c("bmi", "studyB"), 
                    grid.resolution = 10) %>%
       pdp::plotPartial(levelplot = FALSE, zlab = "Time", drape = TRUE, 
                        screen = list(z = 20, x = -60))
 
-p5 <- pdp::partial(mars.fit, pred.var = c("bmi", "studyB"), 
+p5 <- pdp::partial(mars.fit, pred.var = c("age", "studyB"), 
                    grid.resolution = 10) %>%
       pdp::plotPartial(levelplot = FALSE, zlab = "Time", drape = TRUE, 
                        screen = list(z = 20, x = -60))
 
-p6 <- pdp::partial(mars.fit, pred.var = c("SBP", "studyB"), 
+p6 <- pdp::partial(mars.fit, pred.var = c("height", "studyB"), 
                    grid.resolution = 10) %>%
       pdp::plotPartial(levelplot = FALSE, zlab = "Time", drape = TRUE, 
                        screen = list(z = 20, x = -60))
