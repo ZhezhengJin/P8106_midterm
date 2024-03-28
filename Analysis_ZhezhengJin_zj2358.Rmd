@@ -32,6 +32,7 @@ library(pdp)
 library(corrplot)
 library(plotmo)
 library(ggrepel)
+library(vip)
 ```
 
 ```{r setup, include=FALSE}
@@ -115,7 +116,8 @@ featurePlot(x_continuous,
             y,
             plot = "scatter",
             span = .5,
-            labels = c("Continuous Predictors","Time from COVID-19 infection to recovery (days)"),
+            labels = c("Continuous Predictors","Time from COVID-19 
+                       infection to recovery (days)"),
             type = c("p", "smooth"),
             layout = c(3, 2))
 
@@ -159,7 +161,8 @@ dis_study = train %>%
   ggplot(aes(x = study, y = recovery_time)) + 
   geom_violin(fill = "orange", color = "blue", alpha = .5)
 
-dis_gender + dis_race + dis_smoking + dis_hyper + dis_diabetes + dis_vac + dis_serverity + dis_study + plot_layout(ncol=3)
+dis_gender + dis_race + dis_smoking + dis_hyper + dis_diabetes + 
+  dis_vac + dis_serverity + dis_study + plot_layout(ncol=3)
 
 # Correlation plots
 corrplot(cor(x_continuous), method = "circle", type = "full")
@@ -176,7 +179,7 @@ Next, we will fit 5 linear models(Lasso, ridge, elastic net, PCR, PLS) and 2 non
 set.seed(2358)
 lasso.fit <- train(x, y, method = "glmnet", 
                    tuneGrid = expand.grid(alpha = 1,
-                                          lambda = exp(seq(6, 0, length=100))),
+                                          lambda = exp(seq(6, -3, length=100))),
                    trControl = ctrl1)
 
 plot(lasso.fit, xTrans = log)
@@ -201,7 +204,7 @@ lasso.mse
 set.seed(2358)
 ridge.fit <- train(x, y, method = "glmnet", 
                    tuneGrid = expand.grid(alpha = 0,
-                                          lambda = exp(seq(6, 0, length=100))),
+                                          lambda = exp(seq(6, -3, length=100))),
                    trControl = ctrl1)
 
 plot(ridge.fit, xTrans = log)
@@ -226,7 +229,7 @@ ridge.mse
 set.seed(2358)
 enet.fit <- train(x, y,method = "glmnet",
                   tuneGrid = expand.grid(alpha = seq(0 , 1, length = 19), 
-                                         lambda = exp(seq(6, 0, length = 100))),
+                                         lambda = exp(seq(6, -3, length = 100))),
                   trControl = ctrl1)
 
 # Tuning parameters
@@ -338,11 +341,14 @@ mars.fit$bestTune
 coef(mars.fit$finalModel)
 
 # Present the partial dependence plot of an arbitrary predictor
-p1 <- pdp::partial(mars.fit, pred.var = c("bmi"), grid.resolution = 10) %>% autoplot()
+p1 <- pdp::partial(mars.fit, pred.var = c("bmi"), grid.resolution = 10) %>%
+  autoplot()
 
-p2 <- pdp::partial(mars.fit, pred.var = c("age"), grid.resolution = 10) %>% autoplot()
+p2 <- pdp::partial(mars.fit, pred.var = c("age"), grid.resolution = 10) %>%
+  autoplot()
 
-p3 <- pdp::partial(mars.fit, pred.var = c("vaccine1"), grid.resolution = 10) %>% autoplot()
+p3 <- pdp::partial(mars.fit, pred.var = c("vaccine1"), grid.resolution = 10) %>%
+  autoplot()
 
 p4 <- pdp::partial(mars.fit, pred.var = c("bmi", "studyB"), 
                    grid.resolution = 10) %>%
@@ -360,6 +366,11 @@ p6 <- pdp::partial(mars.fit, pred.var = c("height", "studyB"),
                        screen = list(z = 20, x = -60))
 
 gridExtra::grid.arrange(p1, p2,p3, p4, p5, p6, ncol = 3)
+
+# Variable importance plot
+p7 <- vip(mars.fit$finalModel)
+
+p7
 
 # Make prediction on test data
 mars.pred <- predict(mars.fit, newdata = x2)
