@@ -84,6 +84,9 @@ x2 <- model.matrix(recovery_time~.,test)[,-1]
 # vector of response
 y <- train$recovery_time
 y2 <- test$recovery_time
+
+# 10-fold cv on best
+ctrl1 <- trainControl(method = "cv", number = 10)
 ```
 
 ## Expoloratory Data Analysis
@@ -165,27 +168,7 @@ The "recovery" dataset contains `r ncol(dat)` columns and `r nrow(dat)` observat
 
 From the correlation matrix, some multicollinearities are exist in the continuous predictors of training data, cross-validation will be applied in the next steps.
 
-Next, we will fit 6 linear models(Linear, Lasso, ridge, elastic net, PCR, PLS) and 2 non-linear models(GAM, MARS) using caret, and conduct the model comparison to choose the best fitted one.
-
-## Linear
-```{r}
-# 10-fold cv on best
-ctrl1 <- trainControl(method = "cv", number = 10)
-
-# Fitting the model with Cross-validation
-set.seed(2358)
-lm.fit <- train(x, y, method = "lm", trControl = ctrl1)
-
-# Final model coefficients
-coef(lm.fit$finalModel)
-
-# Make prediction on test data
-lm.pred <- predict(lm.fit, newdata = x2)
-
-# Test error
-lm.mse <- mean((lm.pred - y2)^2)
-lm.mse
-```
+Next, we will fit 5 linear models(Lasso, ridge, elastic net, PCR, PLS) and 2 non-linear models(GAM, MARS) using caret, and conduct the model comparison to choose the best fitted one.
 
 ## Lasso 
 ```{r}
@@ -390,8 +373,7 @@ mars.test.error
 ```{r}
 # re-samples
 set.seed(2358)
-resamp <- resamples(list(lm = lm.fit,
-                         lasso = lasso.fit,
+resamp <- resamples(list(lasso = lasso.fit,
                          ridge = ridge.fit,
                          enet = enet.fit,
                          pcr = pcr.fit,
