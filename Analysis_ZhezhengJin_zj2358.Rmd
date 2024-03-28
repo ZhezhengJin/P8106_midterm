@@ -69,16 +69,6 @@ dat = dat %>%
     study = as.factor(study))
 ```
 
-
-## Summary Statistics
-```{r}
-summary(dat)
-sum(is.na(dat))
-skimr::skim(dat)
-```
-
-The "recovery" dataset contains `r ncol(dat)` columns and `r nrow(dat)` observations without any missing values after omitting the `id` variable. We have 14 predictors (6 numeric and 8 factor(character) variables) in the dataset. Then we partition the dataset into two parts: training data (80%) and test data (20%).
-
 ## Model training Preparation
 ```{r}
 # data partition
@@ -98,6 +88,11 @@ y2 <- test$recovery_time
 
 ## Expoloratory Data Analysis
 ```{r}
+# Summary Statistics
+summary(dat)
+sum(is.na(dat))
+skimr::skim(dat)
+
 # Remove all the categorical predictors out from x before plotting
 x_continuous <- 
   x[, !(colnames(x) %in% 
@@ -166,8 +161,9 @@ dis_gender + dis_race + dis_smoking + dis_hyper + dis_diabetes + dis_vac + dis_s
 # Correlation plots
 corrplot(cor(x_continuous), method = "circle", type = "full")
 ```
+The "recovery" dataset contains `r ncol(dat)` columns and `r nrow(dat)` observations without any missing values after omitting the `id` variable. We have 14 predictors (6 numeric and 8 factor(character) variables) in the dataset. Then we partition the dataset into two parts: training data (80%) and test data (20%).
 
-From the correlation matrix, some multicollinearities are severe shown in the continuous predictors of training data, cross-validation will be applied in the next steps.
+From the correlation matrix, some multicollinearities are exist in the continuous predictors of training data, cross-validation will be applied in the next steps.
 
 Next, we will fit 6 linear models(Linear, Lasso, ridge, elastic net, PCR, PLS) and 2 non-linear models(GAM, MARS) using caret, and conduct the model comparison to choose the best fitted one.
 
