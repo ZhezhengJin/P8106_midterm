@@ -216,6 +216,8 @@ pls.fit <-  train(x, y,
                   trControl = ctrl1,
                   preProcess = c("center", "scale"))
 
+coef(pls.fit$finalModel)
+
 # Make prediction on test data
 pls.pred <- predict(pls.fit, newdata = x2)
 
@@ -273,10 +275,10 @@ coef(mars.fit$finalModel)
 p1 <- pdp::partial(mars.fit, pred.var = c("bmi"), grid.resolution = 10) %>%
   autoplot()
 
-p2 <- pdp::partial(mars.fit, pred.var = c("age"), grid.resolution = 10) %>%
+p2 <- pdp::partial(mars.fit, pred.var = c("studyB"), grid.resolution = 10) %>%
   autoplot()
 
-p3 <- pdp::partial(mars.fit, pred.var = c("vaccine1"), grid.resolution = 10) %>%
+p3 <- pdp::partial(mars.fit, pred.var = c("age"), grid.resolution = 10) %>%
   autoplot()
 
 p4 <- pdp::partial(mars.fit, pred.var = c("bmi", "studyB"), 
